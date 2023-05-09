@@ -1,0 +1,38 @@
+stages:
+  - test
+
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+.cargo-job:
+  cache:
+    - key: $CI_JOB_NAME_SLUG-build-target
+      paths:
+        - target/
+    - key:
+        files:
+          - Cargo.lock
+      paths:
+        - "$CI_PROJECT_DIR/cache/cargo/"
+  after_script:
+    - rm -rf "$CARGO_HOME/registry/src/" || true # can be crated from index
+
+test:
+  extends: .cargo-job
+  stage: test
+  image: rust:1.69
+  script:
+    - cargo test --verbose --color always
+
+lint-code:
+  extends: .cargo-job
+  stage: test
+  image: rust:1.69
+  script:
+    - rustup component add rustfmt
+    - cargo fmt -- --check
+    - rustup component add clippy
+    - cargo clippy -- -D warnings
